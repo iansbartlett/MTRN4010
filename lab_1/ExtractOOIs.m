@@ -49,6 +49,6 @@ for i = 1:ooi_list.N
 
 end	
 
-disp(ooi_list.Color(:))
+%disp(ooi_list.Color(:))
 
 end
