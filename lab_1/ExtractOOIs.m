@@ -25,12 +25,6 @@ ooi_list = struct('N',num_obs, ...
 
 for i = 1:ooi_list.N
 
-  %  object_ranges = range(object_edges(i)+1:object_edges(i+1));
-  %  object_angles = angles(object_edges(i)+1:object_edges(i+1));
-
-   % object_X = cos(object_angles).*object_ranges;   
-   % object_Y = sin(object_angles).*object_ranges;   
-
     object_X = X_pos(object_edges(i)+1:object_edges(i+1));
     object_Y = Y_pos(object_edges(i)+1:object_edges(i+1));
 
@@ -38,7 +32,11 @@ for i = 1:ooi_list.N
     ooi_list.Centers(:,i) = [median(object_X),median(object_Y)];
 
     %Use the Euclidian distance from first to last point as the size
+    %If it is outside the valid distance range, reject. 
     ooi_list.Diameters(i) = norm([object_X(end)-object_X(1)],object_Y(end)-object_Y(1));
+    if (ooi_list.Diameters(i) > 0.2 | ooi_list.Diameters(i) < 0.05)
+	   ooi_list.Diameters(i) = -1; 
+   end
 
     %Check if any pixels are reflective
     if max(intensity(object_edges(i)+1:object_edges(i+1)) > 0)
@@ -49,6 +47,10 @@ for i = 1:ooi_list.N
 
 end	
 
-%disp(ooi_list.Color(:))
+% Clean up invalid objects
+ooi_list.Color(find(ooi_list.Diameters < 0)) = [];
+ooi_list.Centers(:,find(ooi_list.Diameters < 0)) = [];
+ooi_list.Diameters(find(ooi_list.Diameters < 0)) = [];
+ooi_list.N = length(ooi_list.Diameters);
 
 end
