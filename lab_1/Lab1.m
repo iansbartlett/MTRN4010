@@ -60,6 +60,7 @@ function [] = Lab1(file)
 end
 
 function process_scan(scan,t,mh,i)
+   tic
    angles = [0:360]'*0.5*pi/180;
 
    %Obtain range data
@@ -76,6 +77,7 @@ function process_scan(scan,t,mh,i)
    Y = sin(angles).*ranges;
    
    oois = ExtractOOIs(ranges, intensity);
+   toc 
    PlotOOIs(oois, mh);
 
    %Update the plots
@@ -84,7 +86,7 @@ function process_scan(scan,t,mh,i)
    set(mh.bright_axes,'xdata',X(ii_bright),'ydata',Y(ii_bright));
 
    %Update plot titles
-   s = sprintf('Laser scan # %d at time %.3f secs', i, t);
+   s = sprintf('Raw Laser scan # %d at time %.3f secs', i, t);
    set(mh.data_plot_title,'string',s);
 
 end
