@@ -31,8 +31,8 @@ if(length(dull_circles)>0)
    set(handles.other_circles, 'xdata',dull_circles(:,1),'ydata',dull_circles(:,2));
 end
 
-s = sprintf('Processed: Tracking %d bright objects out of %d total objects', length(find(i_bright)), ooi.N)
+%s = sprintf('Processed: Tracking %d bright objects out of %d total objects', length(find(i_bright)), ooi.N)
 
-set(handles.object_plot_title,'string',s)
+%set(handles.object_plot_title,'string',s)
 
 end

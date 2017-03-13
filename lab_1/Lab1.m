@@ -19,30 +19,33 @@ function [] = Lab1(file)
 
 	hold on;
 
-	gui_handles.data_plot = subplot(1,2,1);
+	%gui_handles.data_plot = subplot(1,2,1);
 	hold on;
 	gui_handles.data_axes = plot(0,0,'b. ');
 	gui_handles.bright_axes = plot(0,0,'r* ');
-	axis([-10,10,0,20]);
+	gui_handles.ooi_centers = plot(0,0,'g* ');
+	gui_handles.ooi_circles = plot(0,0,'g. ');
+	gui_handles.other_circles = plot(0,0,'k. ');
+	axis([-10,10,0,10]);
 	xlabel('X (m)');
 	ylabel('Y (m)');
 	gui_handles.data_plot_title = title('');
 	zoom on;
 	grid on;
 
-	gui_handles.object_plot = subplot(1,2,2)
-	hold on;
-	gui_handles.ooi_centers = plot(0,0,'g* ');
-	gui_handles.ooi_circles = plot(0,0,'g. ');
-	gui_handles.other_circles = plot(0,0,'b. ');
+	%gui_handles.object_plot = subplot(1,2,2)
+	%hold on;
+	%gui_handles.ooi_centers = plot(0,0,'g* ');
+	%gui_handles.ooi_circles = plot(0,0,'g. ');
+	%gui_handles.other_circles = plot(0,0,'b. ');
 	%gui_handles.c1 = viscircles([0,0],0)
 	%gui_handles.c2 = viscircles([0,0],0)
-	axis([-10,10,0,20]);
-	xlabel('X (m)');
-	ylabel('Y (m)');
-	gui_handles.object_plot_title = title('');
-	zoom on;
-	grid on;
+	%axis([-10,10,0,10]);
+	%xlabel('X (m)');
+	%ylabel('Y (m)');
+	%gui_handles.object_plot_title = title('');
+	%zoom on;
+	%grid on;
 
 	N = dataL.N;
 	skip = 3;
@@ -86,7 +89,7 @@ function process_scan(scan,t,mh,i)
    set(mh.bright_axes,'xdata',X(ii_bright),'ydata',Y(ii_bright));
 
    %Update plot titles
-   s = sprintf('Raw Laser scan # %d at time %.3f secs', i, t);
+   s = sprintf('Raw Laser scan # %d at time %.3f secs, tracking %d bright OOIs', i, t);
    set(mh.data_plot_title,'string',s);
 
 end
