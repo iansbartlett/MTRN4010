@@ -81,7 +81,7 @@ function process_scan(scan,t,mh,i)
    
    oois = ExtractOOIs(ranges, intensity);
    toc 
-   PlotOOIs(oois, mh);
+   count = PlotOOIs(oois, mh);
 
    %Update the plots
    ii_bright = find(intensity~=0);
@@ -89,7 +89,7 @@ function process_scan(scan,t,mh,i)
    set(mh.bright_axes,'xdata',X(ii_bright),'ydata',Y(ii_bright));
 
    %Update plot titles
-   s = sprintf('Raw Laser scan # %d at time %.3f secs, tracking %d bright OOIs', i, t);
+   s = sprintf('Raw Laser scan # %d at time %.3f secs, tracking %d bright OOIs', i, t, count);
    set(mh.data_plot_title,'string',s);
 
 end

@@ -1,13 +1,13 @@
-function [ooi_list] = ExtractOOIs(range, intensity)
-% A function to sort objects in LIDAR range data into clusters
+function [ooi_list] = ExtractOOIs(ranges, intensity)
+% A function to sort objects in LIDAR ranges data into clusters
 % Ian Bartlett
 
-threshold = 0.25;
+threshold = 0.15;
 
 angles = [0:360]'*0.5*pi/180;
 
-X_pos = cos(angles).*range;
-Y_pos = sin(angles).*range;
+X_pos = cos(angles).*ranges;
+Y_pos = sin(angles).*ranges;
 
 %Find the gaps
 object_edges = [0 (find(sqrt(diff(X_pos).^2+diff(Y_pos).^2) > threshold))'];
@@ -31,8 +31,9 @@ for i = 1:ooi_list.N
     ooi_list.Centers(:,i) = [mean(object_X),mean(object_Y)];
 
     %Use the Euclidian distance from first to last point as the size
-    %If it is outside the valid distance range, reject. 
-    ooi_list.Diameters(i) = norm(object_X(end)-object_X(1),object_Y(end)-object_Y(1));
+    %If it is outside the valid distance ranges, reject. 
+    %ooi_list.Diameters(i) = norm(object_X(end)-object_X(1),object_Y(end)-object_Y(1));
+    ooi_list.Diameters(i) = norm(range(object_X),range(object_Y));
     if (ooi_list.Diameters(i) > 0.2 || ooi_list.Diameters(i) < 0.05)
 	   ooi_list.Diameters(i) = -1; 
    end

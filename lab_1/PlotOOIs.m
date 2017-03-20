@@ -1,4 +1,4 @@
-function [] = PlotOOIs(ooi, handles)
+function [no_bright] = PlotOOIs(ooi, handles)
 % A function to display a list of objects of interest
 % Ian Bartlett
 
@@ -35,4 +35,5 @@ end
 
 %set(handles.object_plot_title,'string',s)
 
+no_bright = length(find(i_bright));
 end
