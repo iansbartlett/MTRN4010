@@ -1,3 +1,4 @@
+
 % Overall code for Lab 1
 % Ian Bartlett
 % Code adapted from ExampleProcessLaserData.m and ExampleUseLaserData.,
@@ -23,8 +24,8 @@ function [] = Lab1(file)
 	hold on;
 	gui_handles.data_axes = plot(0,0,'b. ');
 	gui_handles.bright_axes = plot(0,0,'r* ');
-	gui_handles.ooi_centers = plot(0,0,'g* ');
-	gui_handles.ooi_circles = plot(0,0,'g. ');
+	gui_handles.ooi_centers = plot(0,0,'m* ');
+	gui_handles.ooi_circles = plot(0,0,'m. ');
 	gui_handles.other_circles = plot(0,0,'k. ');
 	axis([-10,10,0,10]);
 	xlabel('X (m)');
@@ -48,7 +49,7 @@ function [] = Lab1(file)
 	%grid on;
 
 	N = dataL.N;
-	skip = 3;
+	skip = 10;
 
 	for i=1:skip:N
 		t = double(dataL.times(i) - dataL.times(1))/10000;
