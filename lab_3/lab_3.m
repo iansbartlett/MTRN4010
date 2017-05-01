@@ -28,6 +28,21 @@ laser_times = double(laser_data.dataL.times)/time_conv_factor;
 laser_times = laser_times - laser_times(1);
 laser_scans = laser_data.dataL.Scans;
 
+% Kalman filter parameters
+
+Xe = [ 0; 0; pi/2 ] ;        
+P = zeros(3,3) ;
+
+Xe_History= zeros(3,length(IMU_times)) ;
+
+stdDevGyro = 2*pi/180 ;        
+stdDevSpeed = 0.15 ; 
+
+Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2]) ;
+Q_u = diag([stdDevGyro stdDevSpeed]);
+
+% Begin configuration initialization
+
 handles = initialize_plots(IMU_times);
 
 %Extract linear trend
@@ -35,9 +50,9 @@ start_index = find(IMU_times - IMU_times(1) < 20,1,'last');
 omega_offset = mean(IMU_omega(1:start_index,3));
 IMU_omega(:,3) = IMU_omega(:,3) - omega_offset;
 
-%Part A and B: Integrate the gyro data, obtain dead-reckoning
-%estimates of our attitude and X-Y position
-%Run the plotting loop:
+%Integrate state to obtain an initial estimate of the robot's path. 
+%This is the old Part A and Part B from Lab 2- we will use this 
+%to provide a point of comparison.
 
 initial_state = [0 0 pi/2]; %Initial x, y, theta
 
@@ -82,7 +97,14 @@ local_OOI_list = global_OOI_list;
 current_scan = 1;
 
 for i = 2:length(IMU_times)-1
-    % When a new laser scan arrives, update
+
+    Dt = IMU_times(i) - IMU_times(i-1);
+
+    %Process new IMU data
+    imu_gyro = IMU_omega(i,3);
+    encoder_speed = velocity(i);
+
+    % If a new laser scan has arrived, process it.
     if (IMU_times(i) > laser_times(current_scan) && current_scan < length(laser_times))
 
         current_scan = current_scan + 1;
@@ -96,7 +118,7 @@ for i = 2:length(IMU_times)-1
         [adjusted_centers_X,adjusted_centers_Y] = ...
         transform_position(local_OOI_list.Centers(1,:)', ...
                            local_OOI_list.Centers(2,:)', ...
-                           state(i,:));
+                           Xe);
                        
          plot_scan(range_i, intensity_i, state(i,:), handles);
         set(handles.object_local_centers,...
@@ -104,6 +126,10 @@ for i = 2:length(IMU_times)-1
         'ydata',adjusted_centers_Y);
         
         %Associate objects
+
+	%Shouldn't just be inventing this attribute here
+	local_OOI_list.global_ID = zeros(local_OOI_list.N, 1);
+
         for j = 1:local_OOI_list.N
             x_dists = global_OOI_list.Centers(1,:) - adjusted_centers_X(j);
             y_dists = global_OOI_list.Centers(2,:) - adjusted_centers_Y(j);
@@ -113,10 +139,12 @@ for i = 2:length(IMU_times)-1
                 set(handles.object_local_labels(j),...
                     'position',[adjusted_centers_X(j)-1,adjusted_centers_Y(j)-0.5],...
                     'String',['Best match: #',num2str(mini),', Error: ', num2str(mindist), ' m']);
+	        local_OOI_list.global_ID(j) = mini;
             else
                  set(handles.object_local_labels(j),...
                     'position',[0,0],...
                     'String','');
+	        local_OOI_list.global_ID(j) = -1;
             end
             
         end
@@ -129,12 +157,58 @@ for i = 2:length(IMU_times)-1
     
     end
         
- 
+    %Compute new P matrix and new predicted value
+
+    J = [ [1,0,-Dt*encoder_speed*sin(Xe(3))  ]  ; [0,1,Dt*encoder_speed*cos(Xe(3))] ;    [ 0,0,1 ] ] ; 
+    F_u = Dt*[[encoder_speed*cos(Xe(3)) 0]; [encoder_speed*sin(Xe(3)) 0]; [0 1];];
+    P = J*P*J'+ (Q + F_u*Q_u*F_u');
+  
+    Xe = int_state(imu_gyro, encoder_speed, Dt, Xe)    
+
+    %If any landmarks have been detected and assocated, use them to compute new 
+    %range/bearing measurements, and perform an EKF update. 
+    for j = 1:local_OOI_list.N
+	    if local_OOI_list.global_ID(j) > 0
+		    landmark_x = global_OOI_list.Centers(local_OOI_list.global_ID(j),1)
+		    landmark_y = global_OOI_list.Centers(local_OOI_list.global_ID(j),2)
+
+		    eDX = (landmark_x-Xe(1)) ;      % (xu-x)
+		    eDY = (landmark_y-Xe(2)) ;      % (yu-y)
+		    eDD = sqrt( eDX*eDX + eDY*eDY ) ; 
+		
+		    % New 2D measurement matrix:
+		    H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
+			 [eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]];
+		    ExpectedRange = eDD ;  
+		    ExpectedBearing = atan2(eDY,eDX) - Xe(3) + pi/2;
+		
+		    % Evaluate residual (innovation)  "Y-h(Xe)" 
+		    %(measured output value - expected output value)
+		    z  = [MeasuredRanges(u) - ExpectedRange ;...
+	                  MeasuredBearings(u) - ExpectedBearing];    
+
+		    % ------ covariance of the noise/uncetainty in the measurements
+		    R = diag([sdev_rangeMeasurement*sdev_rangeMeasurement*4,...
+			      sdev_angleMeasurement*sdev_angleMeasurement*4]);
+
+		    S = R + H*P*H' ;
+		    iS=inv(S);
+		    K = P*H'*iS ;           % Kalman gain
+
+		    % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
+		    Xe = Xe+K*z            % update the  expected value
+		    P = P-P*H'*iS*H*P ;     % update the Covariance
+
+	    end
+    end
+
+    Xe_History(:,i) = Xe;
     
     s = sprintf('Processed: IMU scan %d, Laser scan %d', i, current_scan);
     set(handles.object_title, 'string', s);
     
     set(handles.vehicle_trace,'xdata',state(1:i,1),'ydata',state(1:i,2));
+    set(handles.kalman_trace,'xdata',Xe_History(1:i,1),'ydata',Xe_History(1:i,2));
     pause(0.0001);
 end
 

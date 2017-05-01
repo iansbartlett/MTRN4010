@@ -28,6 +28,7 @@ handles.object_local_centers = plot(0,0,'m *');
 handles.object_data_points = plot(0,0,'k. ');
 handles.object_bright_points = plot(0,0,'rx ');
 handles.vehicle_trace = plot(0,0,'b- ');
+handles.kalman_trace = plot(0,0,'r- ');
 xlabel('X Position (m)');
 ylabel('Y Position (m)');
 axis equal;
