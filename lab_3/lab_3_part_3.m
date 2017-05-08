@@ -2,7 +2,7 @@
 %Part 3 of Project 1 - Full Kalman Filter
 %Ian Bartlett
 
-function [] = lab_3()
+function [] = lab_3_part_3()
 
 time_conv_factor = 10000;
 
@@ -33,10 +33,10 @@ Xe_History= zeros(3,length(IMU_times)) ;
 
 stdDevGyro = 2*pi/180 ;        
 stdDevSpeed = 0.15 ; 
-sdev_rangeMeasurement = 0.1;
-sdev_angleMeasurement = 2*pi/180;
+sdev_rangeMeasurement = 0.25;
+sdev_angleMeasurement = 0.1; 
 
-Q = diag( [ (0.01)^2 ,(0.01)^2 , (1*pi/180)^2]) ;
+Q = diag( [ (0.1)^2 ,(0.1)^2 , (2*pi/180)^2]) ;
 Q_u = diag([stdDevGyro stdDevSpeed]);
 
 % Begin configuration initialization
@@ -77,7 +77,7 @@ global_OOI_list = ExtractOOIs(range_0, intensity_0);
 [global_OOI_list.Centers(1,:),global_OOI_list.Centers(2,:)] = ...
             transform_position(global_OOI_list.Centers(1,:)', ...
                                global_OOI_list.Centers(2,:)', ...
-                               state(1,:));
+                               Xe);
 
 set(handles.object_global_centers,'xdata',global_OOI_list.Centers(1,:),...
                                   'ydata',global_OOI_list.Centers(2,:));
@@ -101,6 +101,10 @@ for i = 2:length(IMU_times)-1
     %Process new IMU data
     imu_gyro = double(IMU_omega(i,3));
     encoder_speed = double(velocity(i));
+    MeasuredRanges = [];
+    MeasuredBearings = []; 
+    ObservedLandmarks = [];
+    num_measurements = 0;
 
     % If a new laser scan has arrived, process it.
     if (IMU_times(i) > laser_times(current_scan) && current_scan < length(laser_times))
@@ -117,8 +121,9 @@ for i = 2:length(IMU_times)-1
         transform_position(local_OOI_list.Centers(1,:)', ...
                            local_OOI_list.Centers(2,:)', ...
                            Xe);
+
+        plot_scan(range_i, intensity_i, Xe, handles);
                        
-         plot_scan(range_i, intensity_i, state(i,:), handles);
         set(handles.object_local_centers,...
         'xdata',adjusted_centers_X,...
         'ydata',adjusted_centers_Y);
@@ -127,11 +132,6 @@ for i = 2:length(IMU_times)-1
 
 	%Shouldn't just be inventing this attribute here
 	local_OOI_list.global_ID = zeros(local_OOI_list.N, 1);
-	
-	MeasuredRanges = [];
-	MeasuredBearings = []; 
-	ObservedLandmarks = [];
-	num_measurements = 0;
 
         for j = 1:local_OOI_list.N
             x_dists = global_OOI_list.Centers(1,:) - adjusted_centers_X(j);
@@ -143,12 +143,15 @@ for i = 2:length(IMU_times)-1
                     'position',[adjusted_centers_X(j)-1,adjusted_centers_Y(j)-0.5],...
                     'String',['Best match: #',num2str(mini),', Error: ', num2str(mindist), ' m']);
 	        local_OOI_list.global_ID(j) = mini;
+
 		MeasuredRanges = [MeasuredRanges, sqrt(local_OOI_list.Centers(1,j)^2 + ...
 		                                       local_OOI_list.Centers(2,j)^2)];
 		MeasuredBearings = [MeasuredBearings, atan2(local_OOI_list.Centers(2,j),...
 		                    local_OOI_list.Centers(1,j))];
-		ObservedLandmarks = [ObservedLandmarks, local_OOI_list.global_ID(j)]
+
+		ObservedLandmarks = [ObservedLandmarks, local_OOI_list.global_ID(j)];
 	        num_measurements = num_measurements + 1;
+
             else
                  set(handles.object_local_labels(j),...
                     'position',[0,0],...
@@ -169,10 +172,14 @@ for i = 2:length(IMU_times)-1
     %Compute new P matrix and new predicted value
 
     J = [ [1,0,-Dt*encoder_speed*sin(Xe(3))  ]  ; [0,1,Dt*encoder_speed*cos(Xe(3))] ;    [ 0,0,1 ] ] ; 
+
     F_u = Dt*[[encoder_speed*cos(Xe(3)) 0]; [encoder_speed*sin(Xe(3)) 0]; [0 1];];
+
+    % MODIFIED: added J*Q_u*J' term to include input uncertainty
     P = J*P*J'+ (Q + F_u*Q_u*F_u');
-  
-    Xe = int_state(imu_gyro, encoder_speed, Dt, Xe)';    
+    % -----------------------------------------------
+    % and the predicted expected value. 
+    Xe = int_state(imu_gyro, encoder_speed, Dt, Xe)';  
 
     %If any landmarks have been detected and assocated, use them to compute new 
     %range/bearing measurements, and perform an EKF update. 
@@ -188,8 +195,11 @@ for i = 2:length(IMU_times)-1
 	    % New 2D measurement matrix:
 	    H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
 		 [eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]];
+
 	    ExpectedRange = eDD ;  
 	    ExpectedBearing = wrapToPi(atan2(eDY,eDX) - Xe(3) + pi/2);
+
+	    z = [MeasuredRanges(j) - ExpectedRange; MeasuredBearings(j) - ExpectedBearing]; 
 
 	    disp('Measured bearings')
 	    disp(MeasuredBearings)
@@ -205,7 +215,6 @@ for i = 2:length(IMU_times)-1
 	    % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
 	    Xe = Xe+K*z            % update the  expected value
 	    P = P-P*H'*iS*H*P ;     % update the Covariance
-
     end
 
     Xe_History(:,i) = Xe;
