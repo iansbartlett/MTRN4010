@@ -383,7 +383,7 @@ function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMea
         noiseInMeasurements= ContextSimulation.sdev_rangeMeasurement*randn(size(RealRanges));
         % here I add it to the perfect ranges' measurements
         MasuredRanges = RealRanges +  noiseInMeasurements ;
-	MeasuredAngles = RealAngles + ContextSimulation.sdev_angleMeasurement*randn(size(RealAngles));
+ 	MeasuredAngles = RealAngles + ContextSimulation.sdev_angleMeasurement*randn(size(RealAngles));
         % so MasuredRanges are the measurements polluted with
         % noise. I get the "perfect measurements" from the simulated
         % platform.

@@ -1,3 +1,9 @@
+%Author: Ian Bartlett, z3419581
+%Program: Solution for AAS, S1.2017, Task3.Part1
+
+% Code below adopted from example code by Dr. Guivant.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 % DemoEKF.m - version 2017.1
 % MRTN4010 - S1.2016
 % Example using Extended Kalman Filter for the localization problem, using laser range observations.
@@ -79,7 +85,6 @@ stdDevSpeed = 0.15 ;   % We simulate a lot of error!  (very difficult case).
 
 % ... errors in the range measurements (25cm, standard dev.)
 sdev_rangeMeasurement = 0.25 ;          % std. of noise in range measurements. 0.25m
-sdev_angleMeasurement = 0.5*pi/180;
 % this is more than the error you would have with our laser scanner.
 
 % .....................................................
@@ -131,7 +136,7 @@ Q_u = diag([stdDevGyro stdDevSpeed]);
 
 time=0 ;
 % init simulator of process (the "real system").
-InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations);
+InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,DtObservations);
 % (BTW: this is just a simulation to replace the real system, because we,
 % for the moment, do not have the real system. )
 
@@ -160,15 +165,10 @@ for i=1:Li,     % loop
     % you should write the analytical expression on paper to understand the following line.
     J = [ [1,0,-Dt*Noisy_speed*sin(Xe(3))  ]  ; [0,1,Dt*Noisy_speed*cos(Xe(3))] ;    [ 0,0,1 ] ] ; 
     % then I calculate the new coveraince, after the prediction P(K+1|K) = J*P(K|K)*J'+Q ;
-    
-    %Calculate the input noise Jacobian
     F_u = Dt*[[Noisy_speed*cos(Xe(3)) 0]; [Noisy_speed*sin(Xe(3)) 0]; [0 1];];
-
-    % MODIFIED: added J*Q_u*J' term to include input uncertainty
     P = J*P*J'+ (Q + F_u*Q_u*F_u');
     % -----------------------------------------------
     % and the predicted expected value. 
-
     Xe    = RunProcessModel(Xe,Noisy_speed,Noisy_GyroZ,Dt) ;
  
    % the precition step, for this iteration, is done.
@@ -177,7 +177,7 @@ for i=1:Li,     % loop
     
 
     % .. Get range measuremens, if those are available.
-    [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMeasurements();
+    [nDetectedLandmarks,MasuredRanges,IDs]=GetObservationMeasurements();
     
     if nDetectedLandmarks>0,     % any laser data and detected landmarks?
      
@@ -201,36 +201,28 @@ for i=1:Li,     % loop
     
         
             % here is it. "H". I reuse some previous calculations.
-            %H = [  -eDX/eDD , -eDY/eDD , 0 ] ;   % Jacobian of h(X); size 1x3
-
-	    % New 2D measurement matrix:
-%            H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
-             H = [[eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]] ;   % Jacobian of h(X); size 1x3
-
+            H = [  -eDX/eDD , -eDY/eDD , 0 ] ;   % Jacobian of h(X); size 1x3
         
             % the expected distances to the landmarks ( "h(Xe)" )
             ExpectedRange = eDD ;   % just a coincidence: we already calculated them for the Jacobian, so I reuse it. 
-	    ExpectedAngle = atan2(eDY,eDX) - Xe(3) + pi/2;
+        
         
             % Evaluate residual (innovation)  "Y-h(Xe)" 
             %(measured output value - expected output value)
-            %z  = MasuredRanges(u) - ExpectedRange ;      
-	    z = wrapToPi(MeasuredAngles(u) - ExpectedAngle)
+            z  = MasuredRanges(u) - ExpectedRange ;      
 
             % ------ covariance of the noise/uncetainty in the measurements
-            %R = diag([sdev_rangeMeasurement*sdev_rangeMeasurement*4 sdev_angleMeasurement*sdev_angleMeasurement*4]);
-	    R = [sdev_angleMeasurement*sdev_angleMeasurement*4];
-
+            R = sdev_rangeMeasurement*sdev_rangeMeasurement*4 ;
             % I multiply by 4 because I want to be conservative and assume
             % twice the standard deviation that I believe does happen.
         
             % Some intermediate steps for the EKF (as presented in the lecture notes)
             S = R + H*P*H' ;
-            iS=inv(S);                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
+            iS=1/S;                 % iS = inv(S) ;   % in this case S is 1x1 so inv(S) is just 1/S
             K = P*H'*iS ;           % Kalman gain
 
             % ----- finally, we do it...We obtain  X(k+1|k+1) and P(k+1|k+1)
-            Xe = Xe+K*z            % update the  expected value
+            Xe = Xe+K*z ;           % update the  expected value
             P = P-P*H'*iS*H*P ;     % update the Covariance
         % -----  individual EKF update done ...
        end; 
@@ -267,16 +259,15 @@ return ;
 % When we apply the EKF on a real case, we do NOT need this part.
 
 
-function [ranges,angles,IDs] = GetMeasurementsFomNearbyLandmarks(X,map)
+function [ranges,IDs] = GetMeasurementsFomNearbyLandmarks(X,map)
     
     if map.nLandmarks>0,
         dx= map.landmarks(:,1) - X(1) ;
         dy= map.landmarks(:,2) - X(2) ;
         ranges = sqrt((dx.*dx + dy.*dy)) ;
-	angles = atan2(dy,dx) - X(3) + pi/2;
         IDs = [1:map.nLandmarks];
     else,
-        IDs=[];ranges=[];angles=[];
+        IDs=[];ranges=[];
     end;
     % I simulate I measure/detect all the landmarks, however there can be
     % cases where I see just the nearby ones.
@@ -308,7 +299,7 @@ return ;
 
 
 
-function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleMeasurement,DtObservations)
+function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,DtObservations)
     global ContextSimulation;
     ContextSimulation.Xreal = [ 0; 0;pi/2 ] ;     % [x;y;phi]
     ContextSimulation.stdDevSpeed = stdDevSpeed;
@@ -317,7 +308,6 @@ function InitSimulation(stdDevSpeed,stdDevGyro,sdev_rangeMeasurement,sdev_angleM
     ContextSimulation.speed=0;
     ContextSimulation.GyroZ=0;
     ContextSimulation.sdev_rangeMeasurement=sdev_rangeMeasurement;
-    ContextSimulation.sdev_angleMeasurement=sdev_angleMeasurement;
     ContextSimulation.DtObservations=DtObservations;
     ContextSimulation.timeForNextObservation= 0;
     ContextSimulation.CurrSimulatedTime=0;
@@ -353,14 +343,13 @@ function  SimuPlatform(time,Dt)
 return;
 
 
-function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMeasurements(map)
+function [nDetectedLandmarks,MasuredRanges,IDs]=GetObservationMeasurements(map)
     global ContextSimulation NavigationMap;       
    
     if ContextSimulation.CurrSimulatedTime<ContextSimulation.timeForNextObservation,
         % no measurements of outputs at this time.
         nDetectedLandmarks=0;
         MasuredRanges=[];
-        MeasuredAngles=[];
         IDs=[];
         return ; 
     end;
@@ -369,13 +358,13 @@ function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMea
     
     % get simulated range measurements (actual system), in this case the
     % simulated platform.
-        [RealRanges,RealAngles,IDs] = GetMeasurementsFomNearbyLandmarks(ContextSimulation.Xreal,NavigationMap) ;
+        [RealRanges,IDs] = GetMeasurementsFomNearbyLandmarks(ContextSimulation.Xreal,NavigationMap) ;
                 % ...................................................
         nDetectedLandmarks = length(RealRanges) ;
       
         
         if (nDetectedLandmarks<1)       % no detected landmarks...
-            MasuredRanges=[]; MeasuredAngles=[];   IDs=[];    return ; 
+            MasuredRanges=[];   IDs=[];    return ; 
         end;
         
         
@@ -384,7 +373,6 @@ function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMea
         noiseInMeasurements= ContextSimulation.sdev_rangeMeasurement*randn(size(RealRanges));
         % here I add it to the perfect ranges' measurements
         MasuredRanges = RealRanges +  noiseInMeasurements ;
-	MeasuredAngles = RealAngles + ContextSimulation.sdev_angleMeasurement*randn(size(RealAngles));
         % so MasuredRanges are the measurements polluted with
         % noise. I get the "perfect measurements" from the simulated
         % platform.

@@ -40,4 +40,11 @@ xlim([-10,10]);
 ylim([-10,10]);
 grid on;
 
+handles.bias_figure = figure(3);
+clf; hold on;
+handles.bias_title = title('Gyroscope bias estimate');
+handles.bias_initial = plot(0,0,'b-')
+handles.bias_kalman = plot(0,0,'r-')
+xlabel('Time (s)');
+ylabel('Bias estimate (rad s^-1)');
 end

@@ -1,7 +1,7 @@
 %Author: Ian Bartlett, z3419581
 %Program: Utility function to initalize plot handles for Part 3
 
-function [handles] = initialize_plots(times)
+function [handles] = initialize_plots()
 
 handles.master_fig = figure(1);
 clf; hold on;
@@ -11,7 +11,6 @@ handles.att_title = title('Vehicle Attitude vs Time');
 xlabel('Time (s)');
 ylabel('Attitude (deg.)');
 grid on;
-xlim([0, range(times)]);
 ylim([0,500]);
 
 handles.xy_subplot = subplot(122);
@@ -40,4 +39,11 @@ xlim([-10,10]);
 ylim([-10,10]);
 grid on;
 
+handles.bias_figure = figure(3);
+clf; hold on;
+handles.bias_title = title('Gyroscope bias estimate');
+handles.bias_initial = plot(0,0,'b-')
+handles.bias_kalman = plot(0,0,'r-')
+xlabel('Time (s)');
+ylabel('Bias estimate (rad s^-1)');
 end

@@ -1,3 +1,6 @@
+%Author: Ian Bartlett, z3419581
+%Program: A utility function to integrate 3D gyro data.
+
 function [n_att] = integrate_gyros3d(rates,T, o_att)
 % A function to integrate discrete gyroscope data
 %

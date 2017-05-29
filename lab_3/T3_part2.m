@@ -1,3 +1,9 @@
+%Author: Ian Bartlett, z3419581
+%Program: Solution for AAS, S1.2017, Task3.Part2
+
+% Code below adopted from example code by Dr. Guivant.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 % DemoEKF.m - version 2017.1
 % MRTN4010 - S1.2016
 % Example using Extended Kalman Filter for the localization problem, using laser range observations.
@@ -204,8 +210,8 @@ for i=1:Li,     % loop
             %H = [  -eDX/eDD , -eDY/eDD , 0 ] ;   % Jacobian of h(X); size 1x3
 
 	    % New 2D measurement matrix:
-%            H = [[  -eDX/eDD , -eDY/eDD , 0 ]; 
-             H = [[eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]] ;   % Jacobian of h(X); size 1x3
+            H = [[  -eDX/eDD , -eDY/eDD , 0 ]; ...
+                 [eDY/(eDX^2 + eDY^2), -eDX/(eDX^2 + eDY^2), -1]] ;   % Jacobian of h(X); size 1x3
 
         
             % the expected distances to the landmarks ( "h(Xe)" )
@@ -214,13 +220,12 @@ for i=1:Li,     % loop
         
             % Evaluate residual (innovation)  "Y-h(Xe)" 
             %(measured output value - expected output value)
-            %z  = MasuredRanges(u) - ExpectedRange ;      
-	    z = wrapToPi(MeasuredAngles(u) - ExpectedAngle)
+            z  = [[MasuredRanges(u) - ExpectedRange];      
+	          [MeasuredAngles(u) - ExpectedAngle]];
 
             % ------ covariance of the noise/uncetainty in the measurements
-            %R = diag([sdev_rangeMeasurement*sdev_rangeMeasurement*4 sdev_angleMeasurement*sdev_angleMeasurement*4]);
-	    R = [sdev_angleMeasurement*sdev_angleMeasurement*4];
-
+            R = diag([sdev_rangeMeasurement*sdev_rangeMeasurement*4 sdev_angleMeasurement*sdev_angleMeasurement*4]);
+R
             % I multiply by 4 because I want to be conservative and assume
             % twice the standard deviation that I believe does happen.
         
@@ -384,7 +389,7 @@ function [nDetectedLandmarks,MasuredRanges,MeasuredAngles,IDs]=GetObservationMea
         noiseInMeasurements= ContextSimulation.sdev_rangeMeasurement*randn(size(RealRanges));
         % here I add it to the perfect ranges' measurements
         MasuredRanges = RealRanges +  noiseInMeasurements ;
-	MeasuredAngles = RealAngles + ContextSimulation.sdev_angleMeasurement*randn(size(RealAngles));
+ 	MeasuredAngles = RealAngles + ContextSimulation.sdev_angleMeasurement*randn(size(RealAngles));
         % so MasuredRanges are the measurements polluted with
         % noise. I get the "perfect measurements" from the simulated
         % platform.
